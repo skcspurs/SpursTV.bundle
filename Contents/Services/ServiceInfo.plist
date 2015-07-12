@@ -8,13 +8,12 @@
       <dict>
         <key>URLPatterns</key>
         <array>
-          <!--<string>http://open.http.mmp.streamuk.com/p/2000012/.+/entry_id/.+</string>-->
-          <string>http://http.mmp.streamuk.com/content/entry/data/.+mp4.+</string>
+          <string>http://open.http.mmp.streamuk.com/p/2000012/.+/entry_id/.+</string>
         </array>
-        <!--<key>TestURLs</key>
+        <key>TestURLs</key>
         <array>
-          <string>http://www.euronews.net/nocomment/2012/01/04/high-winds-and-heavy-rain-lash-uk/</string>
-        </array>-->
+          <string>http://open.http.mmp.streamuk.com/p/2000012/sp/200001200/raw/entry_id/0_1vohx3t5/version/0</string>
+        </array>
       </dict>
     </dict>
   </dict>

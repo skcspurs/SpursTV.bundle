@@ -1,11 +1,8 @@
 # Global URLs
 KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
 SPURSTV_ROOT = "http://www.tottenhamhotspur.com/spurs-tv/"
-#STREAMUK_API = "http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=getbyids"
 API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
-
-# Need the session key everywhere
-ks = ""
+# TODO Use this API_URL expansion to clean up the code?
 
 # Plex Variables
 PREFIX = "/video/spurstv"
@@ -16,6 +13,9 @@ ART  = 'art-default.jpg'
 ####################################################################################################
 def Start():
     import re
+    ObjectContainer.title1 = NAME
+    ObjectContainer.art = R(ART)
+    DirectoryObject.thumb = R(ICON)
 
     # Make this plugin show up in the 'Video' section in Plex.
     Plugin.AddPrefixHandler(PREFIX, MainMenu, NAME, ICON, ART)
@@ -31,7 +31,7 @@ def Start():
     if(ks_list):
         ks = ks_list[0]
         Dict["spursTvKs"] = ks
-        Log.Info("Session Key(ks) = '" + ks + "'")
+        Log.Info('KS: ' + ks)
     else:
         Log.Critical('Cannot continue without a session key.')
 
@@ -44,6 +44,7 @@ def MainMenu():
     oc.add(DirectoryObject(key=Callback(ListVideos, tag='extra-time'), title="Extra Time", thumb=R(ICON)))
     oc.add(DirectoryObject(key=Callback(ListVideos, tag='features'), title="Features", thumb=R(ICON)))
     return(oc)
+# TODO Generate this from the categories endpoint on the API
 
 ####################################################################################################
 @route(PREFIX + '/listvideos')
@@ -59,14 +60,9 @@ def ListVideos(tag):
     video_ids = raw.xpath('//div[@class="video"]/@data-videoid')
     video_ids.extend([ x.split('/')[7] for x in raw.xpath('//div[@class="card"]/a/@style') ])
 
-    Log.Info('video_ids({0})'.format(video_ids))
-    Log.Info('video_ids: ' + ','.join(video_ids))
-    #filter:entryIdIn=0_wpszy3ew,0_e66uu2ht&filter:objectType=KalturaAssetFilter
-
     # Retrieve the session key
     if('spursTvKs' in Dict):
         ks = Dict['spursTvKs']
-        Log.Info('KS: ' + ks)
     else:
         Log.Error('Cannot ListVideos without a session key')
         return(oc)
@@ -75,86 +71,19 @@ def ListVideos(tag):
     infoXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=getbyids",
                                 values={'ks' : ks, 'entryIds' : ",".join(video_ids)})
     items = infoXml.xpath('//item')
-    Log.Info('Items: ' + str(len(items)))
-
-    ## Get the flavor id for all videos
-    #flavorsXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=list",
-    #                            values={'ks' : ks, 'filter:entryIdIn' : ",".join(video_ids)})
-    #flavorIds = flavorsXml.xpath('//item[width=1280]/id/text()')
-    #Log.Info('Flavors: ' + str(len(flavorIds)))
-    #if(flavorIds > 0):
-    #    Log.Info('FlavorList: ' + ','.join(flavorIds))
-    #    flavorId = flavorIdRaw[0]
-    #    Log.Info("GoodFlavor: " + str(flavorId))
-    #else:
-    #    Log.Error('No video flavor found')
-    #    return(None)
-    #Log.Info('Flavors: ' + str(len(items)))
-    # TODO Fix this section to avoid one of the API calls in the MakeVideoClipObject section
+    ordered_items = sorted(items, key=lambda x: int(x.createdAt.text), reverse=True)
 
     # Loop through XML and create objects
-    for item in infoXml.xpath('//item'):
-        #Log.Info('ID: {0}, URL: {1}'.format(item.id.text, item.downloadUrl.text))
-
-        ## Create video object
-        #vco = VideoClipObject(
-        #    url = item.downloadUrl.text,
-        #    title = item.name.text,
-        #    thumb = GetThumb(item.thumbnailUrl.text),
-        #    summary = item.description.text
-        #)
-        #oc.add(vco)
-
-        # Create the video object and add it to the list
-        vco = MakeVideoClipObject(item, ks)
-        if(vco):
-            oc.add(vco)
+    for item in ordered_items:
+        # Create video object
+        vco = VideoClipObject(
+            url = item.downloadUrl.text,
+            title = item.name.text,
+            thumb = Resource.ContentsOfURLWithFallback(item.thumbnailUrl.text),
+            duration = int(item.msDuration.text),
+            summary = item.description.text
+        )
+        oc.add(vco)
 
     return(oc)
-
-
-####################################################################################################
-@route(PREFIX + '/makevideoclipobject')
-def MakeVideoClipObject(item, ks):
-    # Get flavor list (video types/containers)
-    flavorXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getByEntryId",
-                                values={'ks' : ks, 'entryId' : item.id})
-
-    # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
-    flavorIdRaw = flavorXml.xpath('//item[width=1280]/id/text()')
-    if(flavorIdRaw > 0):
-        flavorId = flavorIdRaw[0]
-        Log.Info("GoodFlavor: " + str(flavorId))
-    else:
-        Log.Error('No video flavor found')
-        return(None)
-
-    # Get actual video URL
-    videoUrlXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getUrl",
-                               values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
-    urls = videoUrlXml.xpath('/xml/result//text()')
-
-    # Quit if we didn't get a video url
-    if(len(urls) < 1):
-        Log.Error('No video URL found')
-        return(None)
-
-    # Create video object
-    vco = VideoClipObject(
-        url = urls[0],
-        title = item.name.text,
-        thumb = GetThumb(item.thumbnailUrl.text),
-        summary = item.description.text
-    )
-    #vco = VideoClipObject()
-    return(vco)
-
-
-####################################################################################################
-# Ripped this code out of the IPTV plugin
-def GetThumb(thumb):
-    if thumb and thumb.startswith('http'):
-        return thumb
-    else:
-        return R('icon-default.png')
 

@@ -1,68 +1,40 @@
-ENTRY_ID_RE = Regex('entry_id\/([^\/]*])')
-####################################################################################################
-#def MediaObjectsForURL(url):
-#    return[
-#            MediaObject(
-#                parts=[PartObject(key = HTTPLiveStreamURL(url = url)) ],
-#                optimized_for_streaming = True
-#            )
-#        ]
+KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
 
+ENTRY_ID_RE = Regex('entry_id/([^/]*)')
+
+####################################################################################################
 def MetadataObjectForURL(url):
+    # Retrieve session key
+    try:
+        import re
+        ksfind = re.compile(r'.*"ks"\s*:\s*"([^"]*)".*', re.DOTALL)
+        ks_scripts = HTML.ElementFromURL(KS_RETRIEVAL_URL, cacheTime=86400).xpath('//script[@type="text/javascript"]//text()')
+        ks_list = [ ksfind.sub(r'\1', s) for s in ks_scripts if 'kalturaIframePackageData = ' in s ]
+        ks = ks_list[0]
+    except:
+        raise Ex.MediaExpired
+
+    # Attempt to retrieve the object's metadata
+    try:
+        # Parse the entry_id out of the URL
+        entry_id = ENTRY_ID_RE.search(url).group(1)
+
+        # Batch request info on videos
+        infoXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=get",
+                                    values={'ks' : ks, 'entryId' : entry_id})
+        entry = infoXml.xpath('//result')[0]
+    except:
+        raise Ex.MediaNotAvailable
+
     # Create video object
     vco = VideoClipObject(
-        title = 'Test Title',
-        thumb = R('icon-default.png'),
-        summary = 'Test description'
+        url = entry.downloadUrl.text,
+        title = entry.name.text,
+        thumb = Resource.ContentsOfURLWithFallback(entry.thumbnailUrl.text),
+        duration = int(entry.msDuration.text),
+        summary = entry.description.text
     )
     return(vco)
-
-####################################################################################################
-#def MetadataObjectForURL(url):
-#    # Parse the entry_id out of the URL
-##http://open.http.mmp.streamuk.com/p/2000012/sp/200001200/raw/entry_id/0_txc3xxj8/version/0
-#    Log.Info('SpursTvGrep - url:' + url)
-#    entry_id = ENTRY_ID_RE.search(url).group(1)
-#    Log.Info('SpursTVURLServiceGrep - EntryId: ' + entry_id)
-#    raise Ex.MediaNotAvailable
-#
-#    # Batch request info on videos
-#    infoXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=getbyids",
-#                                values={'ks' : ks, 'entryIds' : ",".join(video_ids)})
-#    item = infoXml.xpath('//item')[0]
-#
-#    ## Get flavor list (video types/containers)
-#    #flavorXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getByEntryId",
-#    #                            values={'ks' : ks, 'entryId' : entry_id})
-#
-#    ## Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
-#    #flavorIdRaw = flavorXml.xpath('//item[width=1280]/id/text()')
-#    #if(flavorIdRaw > 0):
-#    #    flavorId = flavorIdRaw[0]
-#    #    Log.Info("GoodFlavor: " + str(flavorId))
-#    #else:
-#    #    Log.Error('No video flavor found')
-#    #    return(None)
-#
-#    ## Get actual video URL
-#    #videoUrlXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getUrl",
-#    #                           values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
-#    #urls = videoUrlXml.xpath('/xml/result//text()')
-#
-#    ## Quit if we didn't get a video url
-#    #if(len(urls) < 1):
-#    #    Log.Error('No video URL found')
-#    #    return(None)
-#
-#    # Create video object
-#    vco = VideoClipObject(
-#        url = item.downloadUrl.text,
-#        title = item.name.text,
-#        thumb = GetThumb(item.thumbnailUrl.text),
-#        summary = item.description.text
-#    )
-#    return(vco)
-
 
 
 ####################################################################################################
@@ -77,86 +49,50 @@ def MediaObjectsForURL(url):
             optimized_for_streaming = True
         )
     ]
-    #return [
-    #    MediaObject(
-    #        parts = [PartObject(key=Callback(PlayVideo, url=url))],
-    #        container = Container.MP4,
-    #        video_codec = VideoCodec.H264,
-    #        video_resolution = 'sd',
-    #        audio_codec = AudioCodec.AAC,
-    #        audio_channels = 2,
-    #        optimized_for_streaming = True
-    #    )
-    #]
+# TODO Look into how to return the various quality levels
+#   https://en.wikipedia.org/wiki/List_of_common_resolutions
 
 
 #####################################################################################################
 def PlayVideo(url):
-#    # Parse the entry_id out of the URL
-##http://open.http.mmp.streamuk.com/p/2000012/sp/200001200/raw/entry_id/0_txc3xxj8/version/0
-#    entry_id = ENTRY_ID_RE.search(url).group(1)
-#    Log.Info('SpursTVURLServiceGrep - EntryId: ' + entry_id)
-#    raise Ex.MediaNotAvailable
-#
-#    # Get flavor list (video types/containers)
-#    flavorXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getByEntryId",
-#                                values={'ks' : ks, 'entryId' : entry_id})
-#
-#    # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
-#    flavorIdRaw = flavorXml.xpath('//item[width=1280]/id/text()')
-#    if(flavorIdRaw > 0):
-#        flavorId = flavorIdRaw[0]
-#        Log.Info("GoodFlavor: " + str(flavorId))
-#    else:
-#        Log.Error('No video flavor found')
-#        return(None)
-#
-#    # Get actual video URL
-#    videoUrlXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getUrl",
-#                               values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
-#    urls = videoUrlXml.xpath('/xml/result//text()')
-#
-#    # Quit if we didn't get a video url
-#    if(len(urls) < 1):
-#        Log.Error('No video URL found')
-#        return(None)
-#    return Redirect(url[0])
+    # Retrieve session key
+    try:
+        import re
+        ksfind = re.compile(r'.*"ks"\s*:\s*"([^"]*)".*', re.DOTALL)
+        ks_scripts = HTML.ElementFromURL(KS_RETRIEVAL_URL, cacheTime=86400).xpath('//script[@type="text/javascript"]//text()')
+        ks_list = [ ksfind.sub(r'\1', s) for s in ks_scripts if 'kalturaIframePackageData = ' in s ]
+        ks = ks_list[0]
+    except:
+        raise Ex.MediaExpired
 
-    #try:
-    #    data = HTTP.Request(url, follow_redirects=False).content
-    #except Ex.RedirectError, e:
-    #    raise Ex.MediaExpired
-    #except:
-    #    raise Ex.MediaNotAvailable
-    return Redirect(url)
-    #return IndirectResponse(VideoClipObject, key=url)
+    # Parse the entry_id out of the URL
+    entry_id = ENTRY_ID_RE.search(url).group(1)
+
+    # Get flavor list (video types/containers)
+    flavorXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getByEntryId",
+                                values={'ks' : ks, 'entryId' : entry_id})
+
+    # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
+    flavorIdRaw = flavorXml.xpath('//item[width=1920]/id/text()')
+    if(flavorIdRaw > 0):
+        flavorId = flavorIdRaw[0]
+    else:
+        raise Ex.MediaNotAvailable
+
+    # Get actual video URL
+    videoUrlXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getUrl",
+                               values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
+    urls = videoUrlXml.xpath('/xml/result//text()')
+
+    # Quit if we didn't get a video url
+    if(len(urls) < 1):
+        raise Ex.MediaNotAvailable
+
+    return Redirect(urls[0])
 
 
 #####################################################################################################
 def NormalizeURL(url):
-
 	return url
+# TODO Normalize the .com URLs to the download URL
 
-#####################################################################################################
-#def MetadataObjectForURL(url):
-#
-#	(show_id, video_id) = url.split('#')[-1].split('|')
-#	found_episode = False
-#
-#	for episode in JSON.ObjectFromURL(EPISODES_URL % show_id)['results']:
-#
-#		if episode['assetID'].endswith(video_id):
-#
-#			return EpisodeObject(
-#				show = episode['parentContainerTitle'],
-#				season = int(episode['seasonNumber']),
-#				index = int(episode['episodeNumber']),
-#				title = episode['title'],
-#				summary = episode['description'],
-#				duration = episode['totalDuration'],
-#				thumb = episode['images'][0]['images']['episode_banner'],
-#				originally_available_at = Datetime.FromTimestamp(episode['firstAiredDate']).date()
-#			)
-#
-#	raise Ex.MediaNotAvailable
-#
