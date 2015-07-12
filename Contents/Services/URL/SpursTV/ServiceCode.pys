@@ -41,20 +41,40 @@ def MetadataObjectForURL(url):
 def MediaObjectsForURL(url):
     return [
         MediaObject(
-            parts = [PartObject(key=Callback(PlayVideo, url = url))],
             container = Container.MP4,
             video_codec = VideoCodec.H264,
             audio_codec = AudioCodec.AAC,
+            video_resolution = "1080",
+            optimized_for_streaming = True,
             audio_channels = 2,
-            optimized_for_streaming = True
-        )
+            parts = [PartObject(key=Callback(PlayVideo, url = url, res = "1080"))]
+        ),
+        MediaObject(
+            container = Container.MP4,
+            video_codec = VideoCodec.H264,
+            audio_codec = AudioCodec.AAC,
+            video_resolution = "720",
+            optimized_for_streaming = True,
+            audio_channels = 2,
+            parts = [PartObject(key=Callback(PlayVideo, url = url, res = "720"))]
+        ),
+        MediaObject(
+            container = Container.MP4,
+            video_codec = VideoCodec.H264,
+            audio_codec = AudioCodec.AAC,
+            video_resolution = "480",
+            optimized_for_streaming = True,
+            audio_channels = 2,
+            parts = [PartObject(key=Callback(PlayVideo, url = url, res = "480"))]
+        ),
     ]
-# TODO Look into how to return the various quality levels
-#   https://en.wikipedia.org/wiki/List_of_common_resolutions
 
 
 #####################################################################################################
-def PlayVideo(url):
+def PlayVideo(url, res='720'):
+    # Lookup table to convert resolutions for playback
+    resWidths = { '1080' : '1920', '720' : '1280', '480' : '640' }
+
     # Retrieve session key
     try:
         import re
@@ -73,7 +93,7 @@ def PlayVideo(url):
                                 values={'ks' : ks, 'entryId' : entry_id})
 
     # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
-    flavorIdRaw = flavorXml.xpath('//item[width=1920]/id/text()')
+    flavorIdRaw = flavorXml.xpath('//item[width=%s]/id/text()' % resWidths[res])
     if(flavorIdRaw > 0):
         flavorId = flavorIdRaw[0]
     else:
