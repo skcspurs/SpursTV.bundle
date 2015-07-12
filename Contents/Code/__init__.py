@@ -2,7 +2,6 @@
 KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
 SPURSTV_ROOT = "http://www.tottenhamhotspur.com/spurs-tv/"
 API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
-# TODO Use this API_URL expansion to clean up the code?
 
 # Plex Variables
 PREFIX = "/video/spurstv"
@@ -16,6 +15,7 @@ def Start():
     ObjectContainer.title1 = NAME
     ObjectContainer.art = R(ART)
     DirectoryObject.thumb = R(ICON)
+    # TODO Fanart and icon
 
     # Make this plugin show up in the 'Video' section in Plex.
     Plugin.AddPrefixHandler(PREFIX, MainMenu, NAME, ICON, ART)
@@ -45,6 +45,7 @@ def MainMenu():
     oc.add(DirectoryObject(key=Callback(ListVideos, tag='features'), title="Features", thumb=R(ICON)))
     return(oc)
 # TODO Generate this from the categories endpoint on the API
+# TODO Subsections for each of these?
 
 ####################################################################################################
 @route(PREFIX + '/listvideos')
@@ -68,7 +69,7 @@ def ListVideos(tag):
         return(oc)
 
     # Batch request info on videos
-    infoXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=getbyids",
+    infoXml = XML.ObjectFromURL(url=API_URL % ('baseEntry', 'getbyids'),
                                 values={'ks' : ks, 'entryIds' : ",".join(video_ids)})
     items = infoXml.xpath('//item')
     ordered_items = sorted(items, key=lambda x: int(x.createdAt.text), reverse=True)

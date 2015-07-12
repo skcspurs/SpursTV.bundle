@@ -1,3 +1,4 @@
+API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
 KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
 
 ENTRY_ID_RE = Regex('entry_id/([^/]*)')
@@ -20,7 +21,7 @@ def MetadataObjectForURL(url):
         entry_id = ENTRY_ID_RE.search(url).group(1)
 
         # Batch request info on videos
-        infoXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=baseEntry&action=get",
+        infoXml = XML.ObjectFromURL(url=API_URL % ('baseEntry', 'get'),
                                     values={'ks' : ks, 'entryId' : entry_id})
         entry = infoXml.xpath('//result')[0]
     except:
@@ -89,8 +90,8 @@ def PlayVideo(url, res='720'):
     entry_id = ENTRY_ID_RE.search(url).group(1)
 
     # Get flavor list (video types/containers)
-    flavorXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getByEntryId",
-                                values={'ks' : ks, 'entryId' : entry_id})
+    flavorXml = XML.ObjectFromURL(url=API_URL % ('flavorAsset', 'getByEntryId'),
+                                    values={'ks' : ks, 'entryId' : entry_id})
 
     # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
     flavorIdRaw = flavorXml.xpath('//item[width=%s]/id/text()' % resWidths[res])
@@ -100,8 +101,8 @@ def PlayVideo(url, res='720'):
         raise Ex.MediaNotAvailable
 
     # Get actual video URL
-    videoUrlXml = XML.ObjectFromURL(url="http://mmp.streamuk.com/api_v3/index.php?service=flavorAsset&action=getUrl",
-                               values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
+    videoUrlXml = XML.ObjectFromURL(url=API_URL % ('flavorAsset', 'getUrl'),
+                                       values={'ks' : ks, 'id' : flavorId, 'storageId' : 0})
     urls = videoUrlXml.xpath('/xml/result//text()')
 
     # Quit if we didn't get a video url
