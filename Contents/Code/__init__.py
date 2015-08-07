@@ -1,7 +1,8 @@
 # Global URLs
 KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
-SPURSTV_ROOT = "http://www.tottenhamhotspur.com/spurs-tv/"
-API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
+SPURSTV_ROOT = "http://www.tottenhamhotspur.com/spurs-tv"
+#OLD_API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
+API_URL = "http://mp.streamamg.com/api_v3/index.php?service=%s&action=%s"
 
 # Plex Variables
 PREFIX = "/video/spurstv"
@@ -39,10 +40,11 @@ def Start():
 def MainMenu():
     # Hard coded sections from Spurs TV page
     oc = ObjectContainer()
-    oc.add(DirectoryObject(key=Callback(ListVideos, tag='highlights'), title="Highlights", thumb=R(ICON)))
-    oc.add(DirectoryObject(key=Callback(ListVideos, tag='interviews'), title="Interviews", thumb=R(ICON)))
-    oc.add(DirectoryObject(key=Callback(ListVideos, tag='extra-time'), title="Extra Time", thumb=R(ICON)))
-    oc.add(DirectoryObject(key=Callback(ListVideos, tag='features'), title="Features", thumb=R(ICON)))
+    oc.add(DirectoryObject(key=Callback(ListVideos, tag='/'), title="Featured", thumb=R(ICON)))
+    oc.add(DirectoryObject(key=Callback(ListVideos, tag='/highlights'), title="Highlights", thumb=R(ICON)))
+    oc.add(DirectoryObject(key=Callback(ListVideos, tag='/interviews'), title="Interviews", thumb=R(ICON)))
+    oc.add(DirectoryObject(key=Callback(ListVideos, tag='/extra-time'), title="Extra Time", thumb=R(ICON)))
+    oc.add(DirectoryObject(key=Callback(ListVideos, tag='/features'), title="Features", thumb=R(ICON)))
     return(oc)
 # TODO Generate this from the categories endpoint on the API
 # TODO Subsections for each of these?
@@ -52,6 +54,7 @@ def MainMenu():
 def ListVideos(tag):
     oc = ObjectContainer()
 
+    Log.Info('Tag: ' + tag)
     # Nothing to do without a tag
     if(not tag):
         return(oc)
@@ -60,6 +63,7 @@ def ListVideos(tag):
     raw = HTML.ElementFromURL(SPURSTV_ROOT + tag)
     video_ids = raw.xpath('//div[@class="video"]/@data-videoid')
     video_ids.extend([ x.split('/')[7] for x in raw.xpath('//div[@class="card"]/a/@style') ])
+    video_ids.extend([ x.split('/')[7] for x in raw.xpath('//li[@class="card"]/a/@style') ])
 
     # Retrieve the session key
     if('spursTvKs' in Dict):
@@ -67,6 +71,8 @@ def ListVideos(tag):
     else:
         Log.Error('Cannot ListVideos without a session key')
         return(oc)
+
+    Log.Info('EntryIDs: ' + str(video_ids))
 
     # Batch request info on videos
     infoXml = XML.ObjectFromURL(url=API_URL % ('baseEntry', 'getbyids'),

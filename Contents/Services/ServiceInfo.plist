@@ -9,10 +9,12 @@
         <key>URLPatterns</key>
         <array>
           <string>http://open.http.mmp.streamuk.com/p/2000012/.+/entry_id/.+</string>
+          <string>http://open.http.mp.streamamg.com/p/2000012/.+/entry_id/.+</string>
         </array>
         <key>TestURLs</key>
         <array>
           <string>http://open.http.mmp.streamuk.com/p/2000012/sp/200001200/raw/entry_id/0_1vohx3t5/version/0</string>
+          <string>http://open.http.mp.streamamg.com/p/2000012/sp/200001200/raw/entry_id/0_3w74td1r/version/0</string>
         </array>
       </dict>
     </dict>
