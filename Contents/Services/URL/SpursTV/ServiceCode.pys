@@ -1,4 +1,5 @@
-API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
+#OLD_API_URL = "http://mmp.streamuk.com/api_v3/index.php?service=%s&action=%s"
+API_URL = "http://mp.streamamg.com/api_v3/index.php?service=%s&action=%s"
 KS_RETRIEVAL_URL = "http://open.http.mmp.streamuk.com/html5/html5lib/v2.0.RC3/mwEmbedFrame.php?&uiconf_id=11170445&wid=_2000012&p=2000012"
 
 ENTRY_ID_RE = Regex('entry_id/([^/]*)')
@@ -95,7 +96,8 @@ def PlayVideo(url, res='720'):
 
     # Get flavor we want (MP4, max resolution) - Determine resolution based on end device?
     flavorIdRaw = flavorXml.xpath('//item[width=%s]/id/text()' % resWidths[res])
-    if(flavorIdRaw > 0):
+    print(flavorIdRaw)
+    if(len(flavorIdRaw) > 0):
         flavorId = flavorIdRaw[0]
     else:
         raise Ex.MediaNotAvailable
